@@ -48,6 +48,7 @@ let token = tokenGet();
 let sessions = [];
 let current = null;
 let busy = false;
+let abortCtrl = null;
 let editingId = null;
 let keepIds = [];
 let openSeq = 0;
@@ -251,10 +252,55 @@ function addMsg(role, text) {
   return c;
 }
 
+const STAR = 'M60 34 C62 49 71 58 86 60 C71 62 62 71 60 86 C58 71 49 62 34 60 C49 58 58 49 60 34Z';
+const GREETINGS = [
+  'Apa yang ingin kita buat?',
+  'Mari berdiskusi!',
+  'Ada yang bisa dibantu hari ini?',
+  'Mau mulai dari mana?',
+  'Ceritakan idemu, kita garap bareng.'
+];
+
+function syncEmpty() {
+  const box = $('#empty');
+  const isEmpty = !$('#messages').children.length;
+  if (isEmpty && box.classList.contains('hidden')) {
+    $('#greet').textContent = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
+  }
+  box.classList.toggle('hidden', !isEmpty);
+}
+
+function startThinking(el) {
+  el.innerHTML =
+    '<div class="think"><svg class="spark" viewBox="28 28 64 64"><path d="' +
+    STAR +
+    '"/></svg><span class="think-txt"></span><span class="think-t"></span></div>';
+  const txt = el.querySelector('.think-txt');
+  const tm = el.querySelector('.think-t');
+  const t0 = Date.now();
+  const tick = () => {
+    const sec = Math.floor((Date.now() - t0) / 1000);
+    txt.textContent =
+      sec < 5
+        ? 'Sedang berpikir…'
+        : sec < 15
+          ? 'Menyusun jawaban…'
+          : sec < 40
+            ? 'Model masih memproses, sebentar lagi…'
+            : 'Model sedang lambat, sabar ya…';
+    tm.textContent = sec + ' dtk';
+  };
+  tick();
+  const id = setInterval(tick, 1000);
+  return () => clearInterval(id);
+}
+
 function drawChat() {
+  $('#empty').classList.add('hidden');
   $('#messages').innerHTML = '';
   $('#title').textContent = current.title;
   current.messages.forEach(m => addMsg(m.role, m.content || ''));
+  syncEmpty();
   stick(true);
 }
 
@@ -345,7 +391,7 @@ function buildMessages(sess) {
   return list;
 }
 
-async function readSSE(r, onText) {
+async function readSSE(r, onText, signal) {
   const reader = r.body.getReader();
   const dec = new TextDecoder();
   let buf = '';
@@ -368,24 +414,30 @@ async function readSSE(r, onText) {
       onText(out);
     }
   };
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += dec.decode(value, { stream: true });
-    const lines = buf.split('\n');
-    buf = lines.pop();
-    lines.forEach(handle);
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      lines.forEach(handle);
+    }
+  } catch (e) {
+    if (signal && signal.aborted) return out;
+    throw e;
   }
   buf += dec.decode();
   if (buf) handle(buf);
   return out;
 }
 
-async function streamChat(m, msgs, onText) {
+async function streamChat(m, msgs, onText, signal) {
   const r = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-    body: JSON.stringify({ modelId: m.id, messages: msgs })
+    body: JSON.stringify({ modelId: m.id, messages: msgs }),
+    signal
   });
   if (r.status === 401) {
     logout();
@@ -399,12 +451,19 @@ async function streamChat(m, msgs, onText) {
     } catch {}
     throw new Error(msg);
   }
-  return readSSE(r, onText);
+  return readSSE(r, onText, signal);
 }
 
 function setBusy(v) {
   busy = v;
-  $('#sendBtn').disabled = v;
+  const b = $('#sendBtn');
+  b.classList.toggle('stop', v);
+  b.setAttribute('aria-label', v ? 'Hentikan respons' : 'Kirim pesan');
+  updateSend();
+}
+
+function stopResponse() {
+  if (abortCtrl) abortCtrl.abort();
 }
 
 async function send() {
@@ -417,6 +476,8 @@ async function send() {
     return;
   }
   const sess = current;
+  const ctrl = new AbortController();
+  abortCtrl = ctrl;
   setBusy(true);
   sess.messages.push({ role: 'user', content: text });
   const firstMsg = sess.messages.length === 1;
@@ -428,12 +489,17 @@ async function send() {
   autosize();
   const userBubble = addMsg('user', text);
   const bubble = addMsg('assistant', '');
-  bubble.textContent = '…';
+  let stopThink = startThinking(bubble);
+  syncEmpty();
   stick(true);
 
   let latest = '';
   let pending = null;
   const onText = t => {
+    if (stopThink) {
+      stopThink();
+      stopThink = null;
+    }
     latest = t;
     if (pending) return;
     pending = requestAnimationFrame(() => {
@@ -445,11 +511,14 @@ async function send() {
 
   try {
     let out = '';
+    let failure = null;
     try {
-      out = await streamChat(m, buildMessages(sess), onText);
-      if (!out.trim()) throw new Error('Model tidak mengembalikan jawaban');
+      out = await streamChat(m, buildMessages(sess), onText, ctrl.signal);
     } catch (e) {
-      if (pending) cancelAnimationFrame(pending);
+      if (!ctrl.signal.aborted) failure = e;
+    }
+    if (pending) cancelAnimationFrame(pending);
+    if (failure || !out.trim()) {
       sess.messages.pop();
       if (firstMsg) sess.title = 'Obrolan Baru';
       if (current === sess) {
@@ -458,22 +527,28 @@ async function send() {
         if (!$('#input').value) $('#input').value = text;
         autosize();
         if (firstMsg) $('#title').textContent = sess.title;
+        syncEmpty();
       }
-      if (e.quota) showPopup(m.name);
-      else toast(e.message || 'Terjadi kesalahan');
+      if (failure) {
+        if (failure.quota) showPopup(m.name);
+        else toast(failure.message || 'Terjadi kesalahan');
+      } else if (!ctrl.signal.aborted) {
+        toast('Model tidak mengembalikan jawaban');
+      }
       return;
     }
-    if (pending) cancelAnimationFrame(pending);
     sess.messages.push({ role: 'assistant', content: out });
     renderMd(bubble, out);
     if (current === sess) stick();
     await persist(sess);
   } finally {
+    if (stopThink) stopThink();
+    if (abortCtrl === ctrl) abortCtrl = null;
     setBusy(false);
   }
 }
 
-$('#sendBtn').addEventListener('click', send);
+$('#sendBtn').addEventListener('click', () => (busy ? stopResponse() : send()));
 $('#input').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && matchMedia('(pointer:fine)').matches) {
     e.preventDefault();
@@ -485,8 +560,13 @@ function autosize() {
   const t = $('#input');
   t.style.height = 'auto';
   t.style.height = Math.min(t.scrollHeight, 140) + 'px';
+  updateSend();
+}
+function updateSend() {
+  $('#sendBtn').classList.toggle('dim', !busy && !$('#input').value.trim());
 }
 $('#input').addEventListener('input', autosize);
+updateSend();
 
 function renderModelBtn() {
   const m = activeModel();
