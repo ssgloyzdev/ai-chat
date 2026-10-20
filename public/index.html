@@ -42,6 +42,25 @@
 
   <main id="messages" class="messages"></main>
 
+  <div id="empty" class="empty hidden">
+    <svg class="logo" viewBox="-2 -2 124 124" aria-hidden="true">
+      <g class="hex">
+        <polygon points="60,8 105,34 105,86 60,112 15,86 15,34"/>
+        <polygon points="60,26 89.4,43 89.4,77 60,94 30.6,77 30.6,43"/>
+        <path d="M60 8V26M105 34L89.4 43M105 86L89.4 77M60 112V94M15 86L30.6 77M15 34L30.6 43"/>
+        <polygon points="60,0 66.9,4 66.9,12 60,16 53.1,12 53.1,4"/>
+        <polygon points="105,26 111.9,30 111.9,38 105,42 98.1,38 98.1,30"/>
+        <polygon points="105,78 111.9,82 111.9,90 105,94 98.1,90 98.1,82"/>
+        <polygon points="60,104 66.9,108 66.9,116 60,120 53.1,116 53.1,108"/>
+        <polygon points="15,78 21.9,82 21.9,90 15,94 8.1,90 8.1,82"/>
+        <polygon points="15,26 21.9,30 21.9,38 15,42 8.1,38 8.1,30"/>
+      </g>
+      <path class="halo" d="M60 22 C63 46 74 57 98 60 C74 63 63 74 60 98 C57 74 46 63 22 60 C46 57 57 46 60 22Z"/>
+      <path class="star" d="M60 34 C62 49 71 58 86 60 C71 62 62 71 60 86 C58 71 49 62 34 60 C49 58 58 49 60 34Z"/>
+    </svg>
+    <p id="greet" class="greet"></p>
+  </div>
+
   <div id="inputBar" class="input-bar">
     <div class="model-row">
       <button id="modelBtn" class="chip">Pilih model ▾</button>
@@ -49,7 +68,10 @@
     </div>
     <div class="input-row">
       <textarea id="input" rows="1" placeholder="Ketik pesan..."></textarea>
-      <button id="sendBtn" class="send">➤</button>
+      <button id="sendBtn" class="send" aria-label="Kirim pesan">
+        <svg class="ic-send" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        <svg class="ic-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>
+      </button>
     </div>
   </div>
 
