@@ -96,7 +96,7 @@ textarea{resize:none}
 .md pre code.hljs{padding:0;background:none}
 .md .blk{position:relative;padding-top:34px;margin:12px 0}
 .md .blk>pre,.md .blk>table{margin:0}
-.copy-btn{position:absolute;top:0;right:0;background:var(--bg3);border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--tx);cursor:pointer}
+.copy-btn{background:var(--bg3);border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--tx);cursor:pointer}
 .copy-btn:active{background:#2a2a2a}
 
 .key-list{display:flex;flex-direction:column;gap:6px}
@@ -132,3 +132,11 @@ textarea{resize:none}
 @keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
 @keyframes ring{0%{box-shadow:0 0 0 0 rgba(255,255,255,.35)}100%{box-shadow:0 0 0 12px rgba(255,255,255,0)}}
 @media (prefers-reduced-motion:reduce){.logo .hex,.logo .star,.spark,.think-txt,.send.stop{animation:none}}
+
+.blk-tools{position:absolute;top:0;right:0;display:flex;gap:6px}
+.md .preview{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.md .preview iframe{display:block;width:100%;height:300px;border:0;background:#fff;color-scheme:light}
+
+.seg{display:flex;gap:2px;padding:2px;background:var(--bg3);border:1px solid var(--line);border-radius:8px}
+.seg-btn{background:none;border:none;color:var(--mut);font-size:12px;padding:3px 10px;border-radius:6px;cursor:pointer}
+.seg-btn.on{background:#f2f2f2;color:#000}
