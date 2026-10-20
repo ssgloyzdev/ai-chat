@@ -180,26 +180,92 @@ async function copyText(t) {
   }
 }
 
+const FRAME_SCRIPT =
+  '<script>(function(){var s=function(){parent.postMessage({h:document.documentElement.scrollHeight},"*")};addEventListener("load",s);new ResizeObserver(s).observe(document.documentElement)})()<\/script>';
+
+const buildDoc = code =>
+  '<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">' + code + FRAME_SCRIPT;
+
+const isHtmlBlock = node => {
+  if (node.tagName !== 'PRE') return false;
+  const code = node.querySelector('code');
+  if (!code) return false;
+  return code.classList.contains('language-html') || /^\s*(<!doctype html|<html)/i.test(code.textContent);
+};
+
+const mkBtn = label => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'copy-btn';
+  b.textContent = label;
+  return b;
+};
+
+const mkSeg = label => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'seg-btn';
+  b.textContent = label;
+  return b;
+};
+
+window.addEventListener('message', e => {
+  const h = e.data && e.data.h;
+  if (typeof h !== 'number') return;
+  document.querySelectorAll('.preview iframe').forEach(f => {
+    if (f.contentWindow === e.source) f.style.height = Math.min(Math.max(h, 80), 560) + 'px';
+  });
+});
+
 function addCopyButtons(root) {
   root.querySelectorAll('pre, table').forEach(node => {
+    const isTable = node.tagName === 'TABLE';
+    const getText = () => (isTable ? tableText(node) : node.textContent.replace(/\n$/, ''));
     const wrap = document.createElement('div');
     wrap.className = 'blk';
     node.replaceWith(wrap);
     wrap.append(node);
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'copy-btn';
-    btn.textContent = node.tagName === 'TABLE' ? 'Salin tabel' : 'Salin kode';
-    const label = btn.textContent;
-    btn.addEventListener('click', async () => {
-      const t = node.tagName === 'TABLE' ? tableText(node) : node.textContent.replace(/\n$/, '');
-      const ok = await copyText(t);
-      btn.textContent = ok ? 'Tersalin ✓' : 'Gagal menyalin';
+    const tools = document.createElement('div');
+    tools.className = 'blk-tools';
+
+    if (isHtmlBlock(node)) {
+      const view = document.createElement('div');
+      view.className = 'preview';
+      const frame = document.createElement('iframe');
+      frame.setAttribute('sandbox', 'allow-scripts');
+      frame.referrerPolicy = 'no-referrer';
+      frame.srcdoc = buildDoc(getText());
+      view.append(frame);
+      wrap.append(view);
+      const seg = document.createElement('div');
+      seg.className = 'seg';
+      const bPrev = mkSeg('Preview');
+      const bCode = mkSeg('Code');
+      const setMode = mode => {
+        const prev = mode === 'preview';
+        view.classList.toggle('hidden', !prev);
+        node.classList.toggle('hidden', prev);
+        bPrev.classList.toggle('on', prev);
+        bCode.classList.toggle('on', !prev);
+      };
+      bPrev.addEventListener('click', () => setMode('preview'));
+      bCode.addEventListener('click', () => setMode('code'));
+      setMode('preview');
+      seg.append(bPrev, bCode);
+      tools.append(seg);
+    }
+
+    const label = isTable ? 'Salin tabel' : 'Salin kode';
+    const copy = mkBtn(label);
+    copy.addEventListener('click', async () => {
+      const ok = await copyText(getText());
+      copy.textContent = ok ? 'Tersalin ✓' : 'Gagal menyalin';
       setTimeout(() => {
-        btn.textContent = label;
+        copy.textContent = label;
       }, 1500);
     });
-    wrap.append(btn);
+    tools.append(copy);
+    wrap.append(tools);
   });
 }
 
