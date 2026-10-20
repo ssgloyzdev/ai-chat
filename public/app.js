@@ -155,7 +155,54 @@ DOMPurify.addHook('afterSanitizeAttributes', n => {
   }
 });
 
-function renderMd(el, text) {
+const tableText = t =>
+  Array.from(t.rows)
+    .map(r => Array.from(r.cells).map(c => c.textContent.trim()).join('\t'))
+    .join('\n');
+
+async function copyText(t) {
+  try {
+    await navigator.clipboard.writeText(t);
+    return true;
+  } catch {
+    const a = document.createElement('textarea');
+    a.value = t;
+    a.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.append(a);
+    a.select();
+    let ok = false;
+    try {
+      ok = document.execCommand('copy');
+    } catch {}
+    a.remove();
+    return ok;
+  }
+}
+
+function addCopyButtons(root) {
+  root.querySelectorAll('pre, table').forEach(node => {
+    const wrap = document.createElement('div');
+    wrap.className = 'blk';
+    node.replaceWith(wrap);
+    wrap.append(node);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'copy-btn';
+    btn.textContent = node.tagName === 'TABLE' ? 'Salin tabel' : 'Salin kode';
+    const label = btn.textContent;
+    btn.addEventListener('click', async () => {
+      const t = node.tagName === 'TABLE' ? tableText(node) : node.textContent.replace(/\n$/, '');
+      const ok = await copyText(t);
+      btn.textContent = ok ? 'Tersalin ✓' : 'Gagal menyalin';
+      setTimeout(() => {
+        btn.textContent = label;
+      }, 1500);
+    });
+    wrap.append(btn);
+  });
+}
+
+function renderMd(el, text, final = true) {
   const code = [];
   const math = [];
   const hide = (store, tag) => m => tag + (store.push(m) - 1) + 'X';
@@ -173,6 +220,7 @@ function renderMd(el, text) {
   const clean = DOMPurify.sanitize(marked.parse(t, { gfm: true, breaks: true }));
   el.innerHTML = show(math, 'MATHPH', esc)(clean);
   el.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b));
+  if (final) addCopyButtons(el);
   try {
     renderMathInElement(el, {
       delimiters: [
@@ -390,7 +438,7 @@ async function send() {
     if (pending) return;
     pending = requestAnimationFrame(() => {
       pending = null;
-      renderMd(bubble, latest);
+      renderMd(bubble, latest, false);
       if (current === sess) stick();
     });
   };
