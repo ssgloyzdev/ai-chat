@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#000000">
+<title>AI Chat</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.10.0/build/styles/github-dark.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="login" class="login hidden">
+  <form id="loginForm" class="login-card">
+    <h1>Masuk</h1>
+    <input id="lu" placeholder="Username" autocomplete="username" required>
+    <input id="lp" type="password" placeholder="Password" autocomplete="current-password" required>
+    <button type="submit" class="btn primary wide">Masuk</button>
+    <p id="le" class="err"></p>
+  </form>
+</div>
+
+<div id="app" class="hidden">
+  <div id="overlay" class="overlay"></div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="side-head">
+      <button id="newChat" class="btn primary wide">+ Obrolan Baru</button>
+    </div>
+    <div id="sessionList" class="session-list"></div>
+    <div class="side-foot">
+      <button id="openSettings" class="btn wide">Pengaturan</button>
+      <button id="logout" class="btn wide">Keluar</button>
+    </div>
+  </aside>
+
+  <header class="topbar">
+    <button id="menuBtn" class="icon-btn">☰</button>
+    <div id="title" class="title">Obrolan Baru</div>
+  </header>
+
+  <main id="messages" class="messages"></main>
+
+  <div id="inputBar" class="input-bar">
+    <div class="model-row">
+      <button id="modelBtn" class="chip">Pilih model ▾</button>
+      <div id="modelMenu" class="model-menu hidden"></div>
+    </div>
+    <div class="input-row">
+      <textarea id="input" rows="1" placeholder="Ketik pesan..."></textarea>
+      <button id="sendBtn" class="send">➤</button>
+    </div>
+  </div>
+
+  <div id="settings" class="modal hidden">
+    <div class="sheet">
+      <div class="sheet-head">
+        <div class="tabs">
+          <button class="tab on" data-tab="tModels">Model &amp; API</button>
+          <button class="tab" data-tab="tSys">Instruksi Khusus</button>
+        </div>
+        <button id="closeSettings" class="icon-btn">✕</button>
+      </div>
+      <div class="sheet-body">
+        <section id="tModels" class="panel">
+          <div id="modelList"></div>
+          <button id="addModel" class="btn primary wide">+ Tambah Model</button>
+          <form id="modelForm" class="form hidden">
+            <label>Nama Model<input id="mName" required></label>
+            <label>Penyedia
+              <select id="mProvider">
+                <option value="groq">Groq</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="openrouter">OpenRouter</option>
+                <option value="together">Together AI</option>
+                <option value="custom">Kustom</option>
+              </select>
+            </label>
+            <label>Base URL<input id="mBase" required></label>
+            <label>ID Model<input id="mModel" required></label>
+            <label>Instruksi Khusus model ini (opsional)<textarea id="mInstr" rows="4" placeholder="Ditambahkan setelah Instruksi Khusus global"></textarea></label>
+            <div class="field">API Key tersimpan<div id="mKeyList" class="key-list"></div></div>
+            <label>Tambah API Key (satu per baris)<textarea id="mKeys" rows="3"></textarea></label>
+            <div class="row">
+              <button type="submit" class="btn primary">Simpan</button>
+              <button type="button" id="cancelForm" class="btn">Batal</button>
+            </div>
+          </form>
+        </section>
+        <section id="tSys" class="panel hidden">
+          <textarea id="sysText" rows="12" placeholder="Tulis instruksi global untuk semua obrolan..."></textarea>
+          <button id="saveSys" class="btn primary wide">Simpan Instruksi</button>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="popup" class="modal hidden">
+    <div class="dialog">
+      <p id="popupText"></p>
+      <div class="row">
+        <button id="popupModel" class="btn">Pilih Model Lain</button>
+        <button id="popupKey" class="btn primary">Ganti API Key</button>
+      </div>
+      <button id="popupClose" class="btn wide">Tutup</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.10.0/build/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
