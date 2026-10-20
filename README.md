@@ -1,6 +1,6 @@
 <div align="center">
 
-![Header Banner](https://capsule-render.vercel.app/api?type=waving&color=auto&height=220&section=header&text=AI%20Chat%20Application&fontSize=42&animation=fadeIn)
+![Header Banner](https://capsule-render.vercel.app/api?type=waving&color=0:000000,100:1c1c1e&height=220&section=header&text=AI%20Chat%20Application&fontSize=42&fontColor=ffffff&animation=fadeIn)
 
 [![GitHub License](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)](LICENSE)
 [![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/HTML)
