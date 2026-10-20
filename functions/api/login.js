@@ -10,8 +10,9 @@ export async function onRequestPost({ request, env }) {
   } catch {
     return res({ error: 'Permintaan tidak valid' }, 400);
   }
-  if (!env.ADMIN_USERNAME || !env.ADMIN_PASSWORD) {
-    return res({ error: 'Server belum dikonfigurasi' }, 500);
+  const missing = ['ADMIN_USERNAME', 'ADMIN_PASSWORD'].filter(k => !env[k]);
+  if (missing.length) {
+    return res({ error: 'Server belum dikonfigurasi, belum terbaca: ' + missing.join(', ') }, 500);
   }
   const okUser = safeEqual(body.username || '', env.ADMIN_USERNAME);
   const okPass = safeEqual(body.password || '', env.ADMIN_PASSWORD);
